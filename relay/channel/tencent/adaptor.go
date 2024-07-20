@@ -17,24 +17,30 @@ import (
 
 type Adaptor struct {
 	Sign      string
+	AppID     int64
 	Action    string
 	Version   string
 	Timestamp int64
 }
 
-func (a *Adaptor) InitRerank(info *relaycommon.RelayInfo, request dto.RerankRequest) {
+func (a *Adaptor) ConvertAudioRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.AudioRequest) (io.Reader, error) {
 	//TODO implement me
-
+	return nil, errors.New("not implemented")
 }
 
-func (a *Adaptor) Init(info *relaycommon.RelayInfo, request dto.GeneralOpenAIRequest) {
+func (a *Adaptor) ConvertImageRequest(c *gin.Context, info *relaycommon.RelayInfo, request dto.ImageRequest) (any, error) {
+	//TODO implement me
+	return nil, errors.New("not implemented")
+}
+
+func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
 	a.Action = "ChatCompletions"
 	a.Version = "2023-09-01"
 	a.Timestamp = common.GetTimestamp()
 }
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
-	return fmt.Sprintf("%s/hyllm/v1/chat/completions", info.BaseUrl), nil
+	return fmt.Sprintf("%s/", info.BaseUrl), nil
 }
 
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, info *relaycommon.RelayInfo) error {
@@ -46,17 +52,18 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, info *re
 	return nil
 }
 
-func (a *Adaptor) ConvertRequest(c *gin.Context, relayMode int, request *dto.GeneralOpenAIRequest) (any, error) {
+func (a *Adaptor) ConvertRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeneralOpenAIRequest) (any, error) {
 	if request == nil {
 		return nil, errors.New("request is nil")
 	}
 	apiKey := c.Request.Header.Get("Authorization")
 	apiKey = strings.TrimPrefix(apiKey, "Bearer ")
-	_, secretId, secretKey, err := parseTencentConfig(apiKey)
+	appId, secretId, secretKey, err := parseTencentConfig(apiKey)
+	a.AppID = appId
 	if err != nil {
 		return nil, err
 	}
-	tencentRequest := requestOpenAI2Tencent(*request)
+	tencentRequest := requestOpenAI2Tencent(a, *request)
 	// we have to calculate the sign here
 	a.Sign = getTencentSign(*tencentRequest, a, secretId, secretKey)
 	return tencentRequest, nil
